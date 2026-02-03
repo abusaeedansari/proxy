@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<title>ProxyPal: Fast-Track</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  :root {
+    --primary: #6c5ce7;       
+    --primary-grad: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+    --accent-grad: linear-gradient(135deg, #ff7675 0%, #fab1a0 100%);
+    --teal-grad: linear-gradient(135deg, #00b894 0%, #55efc4 100%);
+    --bg: #f0f2f5;
+    --card-bg: rgba(255, 255, 255, 0.95);
+    --text-main: #2d3436;
+    --text-sub: #636e72;
+    --shadow-soft: 0 10px 25px -5px rgba(0,0,0,0.06);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: "Nunito", sans-serif;
+    background: var(--bg);
+    margin: 0; padding: 0; color: var(--text-main);
+    overflow-x: hidden;
+    font-size: 17px; 
+  }
+
+  /* --- HEADER --- */
+  header {
+    background: var(--card-bg); padding: 18px 24px;
+    position: sticky; top: 0; z-index: 100;
+    backdrop-filter: blur(12px); border-bottom: 1px solid rgba(0,0,0,0.05);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .brand {
+    font-family: "Fredoka", sans-serif; font-size: 1.9em; margin: 0;
+    background: var(--primary-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    cursor: pointer; letter-spacing: 0.5px;
+  }
+  .admin-btn {
+    background: #f1f2f6; color: var(--text-sub); width: 48px; height: 48px;
+    border-radius: 14px; border: none; font-size: 1.4em; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .admin-btn:hover { background: #dfe6e9; }
+
+  /* --- LAYOUT --- */
+  .container { max-width: 850px; margin: 0 auto; padding: 25px; padding-bottom: 90px; }
+
+  /* --- TOGGLE --- */
+  .view-toggle {
+    background: #dfe6e9; padding: 6px; border-radius: 18px;
+    display: flex; margin-bottom: 30px;
+  }
+  .toggle-opt {
+    flex: 1; padding: 14px; border: none; background: transparent;
+    border-radius: 14px; font-weight: 800; color: var(--text-sub);
+    cursor: pointer; font-family: "Nunito"; font-size: 1em; transition: 0.3s;
+  }
+  .toggle-opt.active { background: #fff; color: var(--primary); box-shadow: 0 4px 8px rgba(0,0,0,0.06); }
+
+  /* --- CARDS --- */
+  .card {
+    background: var(--card-bg); border-radius: 28px;
+    box-shadow: var(--shadow-soft); padding: 28px; margin-bottom: 24px;
+    border: 1px solid rgba(255,255,255,0.7);
+  }
+  h2 { font-family: "Fredoka", sans-serif; font-size: 1.75em; margin: 0 0 6px 0; letter-spacing: 0.5px; }
+  .card-sub { font-size: 1em; color: var(--text-sub); margin-bottom: 24px; display: block; font-weight: 600; }
+
+  /* --- PODIUM --- */
+  .podium { display: flex; justify-content: center; align-items: flex-end; gap: 15px; height: 240px; margin-bottom: 10px; }
+  .podium-spot { width: 32%; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .bar {
+    width: 100%; border-radius: 20px 20px 6px 6px; display: flex; align-items: flex-end; justify-content: center;
+    color: #fff; font-weight: 900; font-size: 1.8em; padding-bottom: 12px;
+    transition: height 0.8s ease; height: 0; box-shadow: 0 12px 25px -6px rgba(0,0,0,0.18);
+  }
+  .rank-1 .bar { background: var(--accent-grad); height: 160px; font-size: 2.4em; z-index: 2; }
+  .rank-2 .bar { background: var(--primary-grad); height: 125px; opacity: 0.95; }
+  .rank-3 .bar { background: var(--teal-grad); height: 100px; opacity: 0.95; }
+  .p-name { margin-top: 12px; font-weight: 800; font-size: 1em; line-height: 1.25; }
+  .p-badge { background: #2d3436; color: #fff; padding: 5px 14px; border-radius: 20px; font-size: 0.9em; font-weight: 800; margin-bottom: 10px; }
+
+  /* --- CHART & LIST --- */
+  .chart-wrapper { overflow-x: auto; padding-bottom: 12px; }
+  .chart-inner { min-width: 750px; height: 320px; }
+  
+  .list-item { display: flex; align-items: center; justify-content: space-between; padding: 18px 0; border-bottom: 1px solid #f0f0f0; }
+  .li-rank { width: 36px; height: 36px; background: #f1f2f6; color: #b2bec3; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; margin-right: 18px; font-size: 0.9em; }
+  .li-name { font-weight: 700; font-size: 1.1em; }
+  .li-score { font-weight: 900; font-size: 1.3em; color: var(--primary); }
+
+  /* --- ADMIN PANEL --- */
+  .admin-panel {
+    display: none; background: #fff; border: 3px solid var(--primary);
+    border-radius: 28px; padding: 24px; margin-bottom: 30px;
+    box-shadow: 0 20px 50px rgba(108, 92, 231, 0.15);
+    animation: slideUp 0.3s ease-out;
+  }
+  .admin-panel.active { display: block; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+  .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+  .status-badge { background: #fab1a0; color: #c0392b; padding: 6px 16px; border-radius: 20px; font-size: 0.85em; font-weight: 900; letter-spacing: 0.5px; }
+
+  .month-picker { width: 100%; padding: 16px; background: #f1f2f6; border: none; border-radius: 16px; font-weight: 800; margin-bottom: 20px; outline: none; font-size: 1.05em; color: var(--text-main); }
+
+  /* SEARCH BAR STYLE */
+  .search-container { position: relative; margin-bottom: 20px; }
+  .search-input {
+    width: 100%; padding: 14px 14px 14px 45px; border: 2px solid #e2e8f0; border-radius: 16px;
+    font-size: 1.1em; font-weight: 700; outline: none; transition: 0.3s;
+    background: #fff; color: var(--text-main);
+  }
+  .search-input:focus { border-color: var(--primary); box-shadow: 0 4px 12px rgba(108, 92, 231, 0.1); }
+  .search-icon {
+    position: absolute; left: 15px; top: 50%; transform: translateY(-50%);
+    font-size: 1.2em; color: #b2bec3;
+  }
+
+  .add-row { display: flex; gap: 12px; margin-bottom: 25px; }
+  .add-input { flex: 1; padding: 14px; border: 2px solid #f0f0f0; border-radius: 16px; font-weight: 700; outline: none; font-size: 1.05em; }
+  .add-input:focus { border-color: var(--primary); }
+  .add-btn { background: var(--primary); color: #fff; border: none; border-radius: 16px; width: 56px; font-size: 1.8em; cursor: pointer; }
+
+  /* --- 2-COLUMN MOBILE GRID --- */
+  .setter-grid { 
+    display: grid; 
+    /* Force minimum width to 130px to ensure 2 fit on mobile */
+    grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); 
+    gap: 12px; 
+  }
+  
+  .setter-card {
+    background: #fff; border: 2px solid #f1f2f6; border-radius: 18px; padding: 14px;
+    text-align: center; position: relative; transition: transform 0.2s;
+  }
+  .setter-card:active { transform: scale(0.98); }
+  
+  /* RED MINUS Icon */
+  .remove-btn {
+    position: absolute; top: -10px; right: -10px;
+    background: #e17055; color: white; width: 32px; height: 32px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 1.4em; font-weight: 900; cursor: pointer; border: 3px solid #fff;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15); transition: 0.2s; z-index: 10;
+  }
+  .remove-btn:active { transform: scale(0.9); }
+
+  .s-name { font-weight: 800; font-size: 0.95em; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .s-val { font-size: 1.6em; font-weight: 900; color: var(--primary); display: block; margin: 8px 0; font-family: "Fredoka"; }
+  
+  .ctrl-row { display: flex; justify-content: center; gap: 8px; }
+  .c-btn { width: 38px; height: 38px; border-radius: 12px; border: none; font-size: 1.3em; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 800; }
+  .c-dec { background: #dfe6e9; color: #636e72; }
+  .c-inc { background: var(--primary); color: #fff; box-shadow: 0 4px 0 #4834d4; }
+  .c-inc:active { transform: translateY(4px); box-shadow: none; }
+
+  /* Archived Section */
+  .archived-section {
+    margin-top: 30px; padding-top: 20px; border-top: 3px dashed #f0f0f0;
+  }
+  .archived-title { font-size: 0.9em; font-weight: 900; color: #b2bec3; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1.2px; }
+  .archived-item {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #fdfdfd; padding: 12px 16px; border-radius: 14px; border: 2px solid #f1f2f6; margin-bottom: 10px;
+  }
+  .restore-btn {
+    background: #55efc4; color: #00b894; border: none; font-weight: 800;
+    padding: 8px 16px; border-radius: 20px; font-size: 0.9em; cursor: pointer;
+  }
+
+  /* --- FOOTER --- */
+  .footer-area { text-align: center; margin-top: 50px; padding-top: 25px; border-top: 1px solid #eee; }
+  .year-select { border: none; background: transparent; font-weight: 800; color: #b2bec3; font-size: 1em; padding: 10px; }
+
+  /* --- LOGIN MODAL --- */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px);
+    display: none; justify-content: center; align-items: center; z-index: 200;
+  }
+  .login-box {
+    background: #fff; padding: 40px; border-radius: 36px; width: 85%; max-width: 350px;
+    box-shadow: 0 25px 70px rgba(0,0,0,0.12); text-align: center; border: 2px solid #fff;
+  }
+  .pin-input {
+    width: 100%; padding: 18px; font-size: 1.8em; letter-spacing: 6px; text-align: center;
+    border: 3px solid #f1f2f6; border-radius: 20px; margin: 25px 0; outline: none; font-weight: 900; color: var(--primary);
+  }
+  .pin-input:focus { border-color: var(--primary); }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    background: #2d3436; color: #fff; padding: 14px 30px; border-radius: 40px;
+    font-weight: 800; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 300; font-size: 1.1em;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+  }
+  .toast.show { opacity: 1; bottom: 50px; }
+
+</style>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+</head>
+<body>
+
+<header>
+  <h1 class="brand" onclick="location.reload()">ProxyPal</h1>
+  <button class="admin-btn" onclick="toggleLogin()">🔒</button>
+</header>
+
+<div class="container">
+
+  <div class="admin-panel" id="adminPanel">
+    <div class="admin-header">
+      <div class="status-badge">SETTER MODE</div>
+      <button class="admin-btn" style="width:36px; height:36px; font-size:1.6em; background:transparent;" onclick="closeAdmin()">×</button>
+    </div>
+    
+    <select id="adminMonthSelect" class="month-picker" onchange="renderAdminGrid()">
+      </select>
+
+    <div class="search-container">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="teacherSearch" class="search-input" placeholder="Quick Find (Type Name...)" onkeyup="filterTeachers()">
+    </div>
+
+    <div class="add-row">
+      <input type="text" id="newTeacherName" class="add-input" placeholder="Add Staff Name...">
+      <button class="add-btn" onclick="addNewTeacher()">+</button>
+    </div>
+
+    <div class="setter-grid" id="adminGrid"></div>
+
+    <div class="archived-section" id="archivedSection" style="display:none;">
+      <div class="archived-title">Archived / Left School</div>
+      <div id="archivedList"></div>
+    </div>
+  </div>
+
+  <div class="view-toggle">
+    <button class="toggle-opt active" id="btn-year" onclick="setViewMode('year')">📅 Full Year</button>
+    <button class="toggle-opt" id="btn-month" onclick="setViewMode('month')">🗓️ This Month</button>
+  </div>
+
+  <div class="card">
+    <h2 id="hero-title">🏆 Top Saviors</h2>
+    <span class="card-sub" id="hero-sub">Leading the charts</span>
+    <div class="podium" id="podium"></div>
+  </div>
+
+  <div class="card">
+    <h2>📊 Workload Trends</h2>
+    <div class="chart-wrapper">
+      <div class="chart-inner" id="chartInner">
+        <canvas id="mainChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📋 The Breakdown</h2>
+    <div id="listView"></div>
+  </div>
+
+  <div class="footer-area">
+    <select id="yearSelect" class="year-select" onchange="handleYearChange()"></select>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="loginModal">
+  <div class="login-box">
+    <h2 style="font-family:'Fredoka'; margin-top:0; font-size:1.8em;">Setter Access</h2>
+    <input type="password" id="adminPass" class="pin-input" placeholder="••••">
+    <button class="toggle-opt active" style="width:100%; background:var(--primary); color:#fff; padding:18px; font-size:1.1em;" onclick="verifyLogin()">Unlock Panel</button>
+    <p style="margin-top:25px; color:#b2bec3; cursor:pointer; font-weight:700;" onclick="toggleLogin()">Cancel</p>
+  </div>
+</div>
+
+<div class="toast" id="toast">Action Saved</div>
+
+<script>
+// --- CONFIG ---
+const firebaseConfig = {
+  apiKey: "AIzaSyB-RDLOoTlaio0VgtFh7eencMr9ekdFEEk",
+  authDomain: "test-app-1-6ade5.firebaseapp.com",
+  databaseURL: "https://test-app-1-6ade5-default-rtdb.firebaseio.com",
+  projectId: "test-app-1-6ade5",
+  storageBucket: "test-app-1-6ade5.firebasestorage.app",
+  messagingSenderId: "938447574937",
+  appId: "1:938447574937:web:65c1c53a12c665988b2508",
+  measurementId: "G-FKNLFZH4G9"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const ADMIN_PASS = "bhiwandi123";
+
+// --- STATE ---
+let rawTeachers = {};
+let rawCounts = {};
+let activeYearStart = 2025;
+let viewMode = 'year';
+let chartRef = null;
+
+let teacherRef = null;
+let countRef = null;
+
+// --- INIT ---
+window.onload = function() {
+  autoDetectYear();
+  setupYearDropdown();
+  
+  document.getElementById('adminPass').addEventListener('keypress', (e) => {
+    if(e.key === 'Enter') verifyLogin();
+  });
+  
+  subscribeToYear(activeYearStart);
+};
+
+function autoDetectYear() {
+  const now = new Date();
+  activeYearStart = (now.getMonth() < 3) ? now.getFullYear() - 1 : now.getFullYear();
+}
+
+function setupYearDropdown() {
+  const sel = document.getElementById('yearSelect');
+  sel.innerHTML = "";
+  for(let y=2024; y<=2030; y++) {
+    let opt = document.createElement('option');
+    opt.value = y;
+    opt.text = `Academic Year ${y}-${y+1}`;
+    if(y === activeYearStart) opt.selected = true;
+    sel.appendChild(opt);
+  }
+}
+
+// --- DB CONNECTION ---
+function subscribeToYear(year) {
+  if(teacherRef) teacherRef.off();
+  if(countRef) countRef.off();
+
+  teacherRef = db.ref(`proxy_tracker/${year}/teachers`);
+  countRef = db.ref(`proxy_tracker/${year}/counts`);
+
+  teacherRef.on('value', snap => {
+    rawTeachers = snap.val() || {};
+    refreshUI();
+  });
+  countRef.on('value', snap => {
+    rawCounts = snap.val() || {};
+    refreshUI();
+  });
+  
+  setupMonthDropdown();
+}
+
+function setupMonthDropdown() {
+  const sel = document.getElementById('adminMonthSelect');
+  sel.innerHTML = "";
+  const months = ["April", "May", "June", "July", "August", "September", "October", "November", "December", "January", "February", "March"];
+  const now = new Date();
+  
+  months.forEach((mName, idx) => {
+    let y = idx > 8 ? activeYearStart + 1 : activeYearStart;
+    let jsIdx = (idx + 3) % 12; // Apr=3
+    let dbKey = `${y}_${jsIdx + 1}`; // 1-12
+    let opt = document.createElement('option');
+    opt.value = dbKey;
+    opt.text = `${mName} ${y}`;
+    sel.appendChild(opt);
+
+    if(jsIdx === now.getMonth() && y === now.getFullYear()) opt.selected = true;
+  });
+}
+
+// --- SEARCH FEATURE ---
+function filterTeachers() {
+  const input = document.getElementById('teacherSearch');
+  const filter = input.value.toUpperCase();
+  const grid = document.getElementById('adminGrid');
+  const cards = grid.getElementsByClassName('setter-card');
+
+  for (let i = 0; i < cards.length; i++) {
+    const nameSpan = cards[i].getElementsByClassName('s-name')[0];
+    if (nameSpan) {
+      const txtValue = nameSpan.textContent || nameSpan.innerText;
+      if (txtValue.toUpperCase().indexOf(filter) > -1) {
+        cards[i].style.display = "";
+      } else {
+        cards[i].style.display = "none";
+      }
+    }
+  }
+}
+
+// --- DATA PROCESSING ---
+function getProcessedList() {
+  let list = [];
+  const now = new Date();
+  let currentMonthKey = `${now.getFullYear()}_${now.getMonth()+1}`;
+
+  Object.keys(rawTeachers).forEach(tid => {
+    let count = 0;
+    if(viewMode === 'year') {
+      const opts = document.getElementById('adminMonthSelect').options;
+      for(let i=0; i<opts.length; i++) {
+        let mKey = opts[i].value;
+        if(rawCounts[mKey] && rawCounts[mKey][tid]) count += rawCounts[mKey][tid];
+      }
+    } else {
+      if(rawCounts[currentMonthKey] && rawCounts[currentMonthKey][tid]) {
+        count = rawCounts[currentMonthKey][tid];
+      }
+    }
+    
+    const isActive = rawTeachers[tid].isActive !== false;
+    if(isActive || count > 0) {
+      list.push({ id: tid, name: rawTeachers[tid].name, count: count, isActive: isActive });
+    }
+  });
+
+  return list.sort((a,b) => b.count - a.count);
+}
+
+// --- RENDER ---
+function refreshUI() {
+  const data = getProcessedList();
+  
+  const now = new Date();
+  const mName = now.toLocaleString('default', { month: 'long' });
+  if(viewMode === 'year') {
+    document.getElementById('hero-title').innerText = "🏆 Top Saviors (Year)";
+    document.getElementById('hero-sub').innerText = `Academic Year ${activeYearStart}-${activeYearStart+1}`;
+  } else {
+    document.getElementById('hero-title').innerText = `🏆 Top Saviors (${mName})`;
+    document.getElementById('hero-sub').innerText = "Current Month Leaders";
+  }
+
+  renderPodium(data);
+  renderChart(data);
+  renderList(data);
+  renderAdminPanel();
+  
+  // Re-apply search filter if user was typing
+  filterTeachers();
+}
+
+function renderPodium(data) {
+  const el = document.getElementById('podium');
+  el.innerHTML = "";
+  const top3 = [data[1], data[0], data[2]];
+  top3.forEach((t, idx) => {
+    if(!t) return;
+    let rank = idx === 1 ? 'rank-1' : (idx === 0 ? 'rank-2' : 'rank-3');
+    let h = t.count === 0 ? "24px" : "";
+    let medal = idx === 1 ? '🥇' : (idx === 0 ? '🥈' : '🥉');
+    el.innerHTML += `
+      <div class="podium-spot ${rank}">
+        <div class="p-badge">${t.count}</div>
+        <div class="bar" style="${h ? 'height:'+h : ''}">${t.count > 0 ? medal : ''}</div>
+        <div class="p-name">${t.name} ${!t.isActive ? '(Left)' : ''}</div>
+      </div>
+    `;
+  });
+}
+
+function renderChart(data) {
+  const ctx = document.getElementById('mainChart').getContext('2d');
+  const minW = Math.max(data.length * 45, 650);
+  document.getElementById('chartInner').style.width = minW + "px";
+
+  if(chartRef) chartRef.destroy();
+  let grad = ctx.createLinearGradient(0, 0, 0, 400);
+  grad.addColorStop(0, '#6c5ce7'); grad.addColorStop(1, '#a29bfe');
+
+  // Larger font for chart
+  Chart.defaults.font.size = 14; 
+  Chart.defaults.font.family = "'Nunito', sans-serif";
+  Chart.defaults.font.weight = 'bold';
+
+  chartRef = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: data.map(t => t.name),
+      datasets: [{
+        data: data.map(t => t.count),
+        backgroundColor: grad, borderRadius: 10, barThickness: 24
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: {display:false} },
+      scales: { y: { beginAtZero: true }, x: { grid: {display:false} } }
+    }
+  });
+}
+
+function renderList(data) {
+  const el = document.getElementById('listView');
+  el.innerHTML = "";
+  data.forEach((t, i) => {
+    const nameStyle = t.isActive ? '' : 'color:#b2bec3; text-decoration:line-through;';
+    el.innerHTML += `
+      <div class="list-item">
+        <div style="display:flex; align-items:center;">
+          <div class="li-rank">${i+1}</div>
+          <div class="li-name" style="${nameStyle}">${t.name}</div>
+        </div>
+        <div class="li-score">${t.count}</div>
+      </div>
+    `;
+  });
+}
+
+function renderAdminPanel() {
+  const grid = document.getElementById('adminGrid');
+  const archivedDiv = document.getElementById('archivedSection');
+  const archivedList = document.getElementById('archivedList');
+  grid.innerHTML = "";
+  archivedList.innerHTML = "";
+  
+  const mKey = document.getElementById('adminMonthSelect').value;
+  let activeCount = 0;
+  let archiveCount = 0;
+
+  let allTeachers = [];
+  Object.keys(rawTeachers).forEach(tid => {
+    let c = (rawCounts[mKey] && rawCounts[mKey][tid]) ? rawCounts[mKey][tid] : 0;
+    allTeachers.push({
+      id: tid, 
+      name: rawTeachers[tid].name, 
+      count: c, 
+      isActive: rawTeachers[tid].isActive !== false 
+    });
+  });
+  allTeachers.sort((a,b) => a.name.localeCompare(b.name));
+
+  allTeachers.forEach(t => {
+    if(t.isActive) {
+      activeCount++;
+      grid.innerHTML += `
+        <div class="setter-card">
+          <button class="remove-btn" onclick="toggleStatus('${t.id}', false)">-</button>
+          <span class="s-name">${t.name}</span>
+          <span class="s-val">${t.count}</span>
+          <div class="ctrl-row">
+            <button class="c-btn c-dec" onclick="modProxy('${t.id}', -1)">-</button>
+            <button class="c-btn c-inc" onclick="modProxy('${t.id}', 1)">+</button>
+          </div>
+        </div>
+      `;
+    } else {
+      archiveCount++;
+      archivedList.innerHTML += `
+        <div class="archived-item">
+          <span style="font-weight:700; color:#636e72; font-size:1.1em;">${t.name}</span>
+          <button class="restore-btn" onclick="toggleStatus('${t.id}', true)">Restore</button>
+        </div>
+      `;
+    }
+  });
+
+  archivedDiv.style.display = archiveCount > 0 ? 'block' : 'none';
+}
+
+// --- ACTIONS ---
+function addNewTeacher() {
+  const n = document.getElementById('newTeacherName').value.trim();
+  if(!n) return;
+  db.ref(`proxy_tracker/${activeYearStart}/teachers`).push({ name: n, isActive: true });
+  document.getElementById('newTeacherName').value = "";
+  showToast("Teacher Added");
+}
+
+function modProxy(tid, delta) {
+  const mKey = document.getElementById('adminMonthSelect').value;
+  db.ref(`proxy_tracker/${activeYearStart}/counts/${mKey}/${tid}`).transaction(c => (c || 0) + delta < 0 ? 0 : (c || 0) + delta);
+}
+
+function toggleStatus(tid, status) {
+  if(status === false) {
+    if(!confirm("Move to Inactive?")) return;
+  }
+  db.ref(`proxy_tracker/${activeYearStart}/teachers/${tid}`).update({ isActive: status });
+  showToast(status ? "Teacher Restored" : "Teacher Archived");
+}
+
+function setViewMode(mode) {
+  viewMode = mode;
+  document.getElementById('btn-year').classList.toggle('active', mode === 'year');
+  document.getElementById('btn-month').classList.toggle('active', mode === 'month');
+  refreshUI();
+}
+
+function handleYearChange() {
+  activeYearStart = parseInt(document.getElementById('yearSelect').value);
+  subscribeToYear(activeYearStart);
+}
+
+// --- UI UTILS ---
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.innerText = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+function toggleLogin() {
+  const m = document.getElementById('loginModal');
+  m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
+}
+function closeAdmin() { document.getElementById('adminPanel').classList.remove('active'); }
+function verifyLogin() {
+  if(document.getElementById('adminPass').value === ADMIN_PASS) {
+    toggleLogin();
+    document.getElementById('adminPanel').classList.add('active');
+  } else { alert("Incorrect Password"); }
+}
+
+</script>
+</body>
+</html>
