@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
-<title>ProxyPal: Fast-Track</title>
+<title>ProxyPal: Time Travel</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
@@ -58,7 +58,7 @@
   /* --- TOGGLE --- */
   .view-toggle {
     background: #dfe6e9; padding: 6px; border-radius: 18px;
-    display: flex; margin-bottom: 30px;
+    display: flex; margin-bottom: 15px; /* Reduced margin to fit filter below */
   }
   .toggle-opt {
     flex: 1; padding: 14px; border: none; background: transparent;
@@ -66,6 +66,19 @@
     cursor: pointer; font-family: "Nunito"; font-size: 1em; transition: 0.3s;
   }
   .toggle-opt.active { background: #fff; color: var(--primary); box-shadow: 0 4px 8px rgba(0,0,0,0.06); }
+
+  /* --- PUBLIC MONTH FILTER (New) --- */
+  .public-filter-box {
+    text-align: center; margin-bottom: 25px; display: none; animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+  
+  .minimal-select {
+    background: #fff; border: 2px solid #dfe6e9; padding: 10px 20px;
+    border-radius: 14px; font-weight: 800; color: var(--text-main);
+    font-family: "Nunito"; font-size: 1em; outline: none; box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    cursor: pointer;
+  }
 
   /* --- CARDS --- */
   .card {
@@ -109,7 +122,7 @@
   .admin-panel.active { display: block; }
   @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-  .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+  .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
   .status-badge { background: #fab1a0; color: #c0392b; padding: 6px 16px; border-radius: 20px; font-size: 0.85em; font-weight: 900; letter-spacing: 0.5px; }
 
   .month-picker { width: 100%; padding: 16px; background: #f1f2f6; border: none; border-radius: 16px; font-weight: 800; margin-bottom: 20px; outline: none; font-size: 1.05em; color: var(--text-main); }
@@ -132,21 +145,18 @@
   .add-input:focus { border-color: var(--primary); }
   .add-btn { background: var(--primary); color: #fff; border: none; border-radius: 16px; width: 56px; font-size: 1.8em; cursor: pointer; }
 
-  /* --- 2-COLUMN MOBILE GRID --- */
+  /* 2-COLUMN MOBILE GRID */
   .setter-grid { 
     display: grid; 
-    /* Force minimum width to 130px to ensure 2 fit on mobile */
     grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); 
     gap: 12px; 
   }
-  
   .setter-card {
     background: #fff; border: 2px solid #f1f2f6; border-radius: 18px; padding: 14px;
     text-align: center; position: relative; transition: transform 0.2s;
   }
   .setter-card:active { transform: scale(0.98); }
   
-  /* RED MINUS Icon */
   .remove-btn {
     position: absolute; top: -10px; right: -10px;
     background: #e17055; color: white; width: 32px; height: 32px;
@@ -250,7 +260,12 @@
 
   <div class="view-toggle">
     <button class="toggle-opt active" id="btn-year" onclick="setViewMode('year')">📅 Full Year</button>
-    <button class="toggle-opt" id="btn-month" onclick="setViewMode('month')">🗓️ This Month</button>
+    <button class="toggle-opt" id="btn-month" onclick="setViewMode('month')">🗓️ Monthly View</button>
+  </div>
+  
+  <div id="publicFilterContainer" class="public-filter-box">
+    <select id="publicMonthSelect" class="minimal-select" onchange="refreshUI()">
+      </select>
   </div>
 
   <div class="card">
@@ -362,12 +377,17 @@ function subscribeToYear(year) {
     refreshUI();
   });
   
-  setupMonthDropdown();
+  setupMonthDropdowns();
 }
 
-function setupMonthDropdown() {
-  const sel = document.getElementById('adminMonthSelect');
-  sel.innerHTML = "";
+function setupMonthDropdowns() {
+  // Populate both Admin and Public dropdowns
+  const adminSel = document.getElementById('adminMonthSelect');
+  const publicSel = document.getElementById('publicMonthSelect');
+  
+  adminSel.innerHTML = "";
+  publicSel.innerHTML = "";
+  
   const months = ["April", "May", "June", "July", "August", "September", "October", "November", "December", "January", "February", "March"];
   const now = new Date();
   
@@ -375,12 +395,23 @@ function setupMonthDropdown() {
     let y = idx > 8 ? activeYearStart + 1 : activeYearStart;
     let jsIdx = (idx + 3) % 12; // Apr=3
     let dbKey = `${y}_${jsIdx + 1}`; // 1-12
+    
+    // Create Option
     let opt = document.createElement('option');
     opt.value = dbKey;
     opt.text = `${mName} ${y}`;
-    sel.appendChild(opt);
+    
+    // Clone for second dropdown
+    let opt2 = opt.cloneNode(true);
 
-    if(jsIdx === now.getMonth() && y === now.getFullYear()) opt.selected = true;
+    adminSel.appendChild(opt);
+    publicSel.appendChild(opt2);
+
+    // Auto-select current real month if relevant
+    if(jsIdx === now.getMonth() && y === now.getFullYear()) {
+      opt.selected = true;
+      opt2.selected = true;
+    }
   });
 }
 
@@ -407,9 +438,7 @@ function filterTeachers() {
 // --- DATA PROCESSING ---
 function getProcessedList() {
   let list = [];
-  const now = new Date();
-  let currentMonthKey = `${now.getFullYear()}_${now.getMonth()+1}`;
-
+  
   Object.keys(rawTeachers).forEach(tid => {
     let count = 0;
     if(viewMode === 'year') {
@@ -419,8 +448,10 @@ function getProcessedList() {
         if(rawCounts[mKey] && rawCounts[mKey][tid]) count += rawCounts[mKey][tid];
       }
     } else {
-      if(rawCounts[currentMonthKey] && rawCounts[currentMonthKey][tid]) {
-        count = rawCounts[currentMonthKey][tid];
+      // MONTH VIEW: Get value from PUBLIC DROPDOWN
+      const pubMonth = document.getElementById('publicMonthSelect').value;
+      if(rawCounts[pubMonth] && rawCounts[pubMonth][tid]) {
+        count = rawCounts[pubMonth][tid];
       }
     }
     
@@ -437,14 +468,15 @@ function getProcessedList() {
 function refreshUI() {
   const data = getProcessedList();
   
-  const now = new Date();
-  const mName = now.toLocaleString('default', { month: 'long' });
   if(viewMode === 'year') {
     document.getElementById('hero-title').innerText = "🏆 Top Saviors (Year)";
     document.getElementById('hero-sub').innerText = `Academic Year ${activeYearStart}-${activeYearStart+1}`;
   } else {
-    document.getElementById('hero-title').innerText = `🏆 Top Saviors (${mName})`;
-    document.getElementById('hero-sub').innerText = "Current Month Leaders";
+    // Get text from public dropdown
+    const sel = document.getElementById('publicMonthSelect');
+    const mText = sel.options[sel.selectedIndex].text;
+    document.getElementById('hero-title').innerText = `🏆 Leaders: ${mText}`;
+    document.getElementById('hero-sub').innerText = "Monthly Breakdown";
   }
 
   renderPodium(data);
@@ -452,8 +484,7 @@ function refreshUI() {
   renderList(data);
   renderAdminPanel();
   
-  // Re-apply search filter if user was typing
-  filterTeachers();
+  filterTeachers(); // Maintain filter state
 }
 
 function renderPodium(data) {
@@ -600,6 +631,11 @@ function setViewMode(mode) {
   viewMode = mode;
   document.getElementById('btn-year').classList.toggle('active', mode === 'year');
   document.getElementById('btn-month').classList.toggle('active', mode === 'month');
+  
+  // Show/Hide Public Filter
+  const filterBox = document.getElementById('publicFilterContainer');
+  filterBox.style.display = (mode === 'month') ? 'block' : 'none';
+  
   refreshUI();
 }
 
